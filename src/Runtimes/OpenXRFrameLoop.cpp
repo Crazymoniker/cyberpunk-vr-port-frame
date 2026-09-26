@@ -1632,6 +1632,8 @@ DWORD OpenXRManager::FrameThreadMain() {
                     const bool sclick = getBool(m_thumbstickClickAction);
                     const bool prim   = getBool(m_primaryButtonAction);
                     const bool sec    = getBool(m_secondaryButtonAction);
+                    const bool frameBumper = m_frameBumperAction != XR_NULL_HANDLE &&
+                                             getBool(m_frameBumperAction);
 
                     // XInput-compatible button bits so the hook can OR them into
                     // XINPUT_GAMEPAD.wButtons directly (XINPUT_GAMEPAD_*).
@@ -1656,11 +1658,10 @@ DWORD OpenXRManager::FrameThreadMain() {
                         ctrl.leftThumbY  = sy;
                         if (prim)   ctrl.buttons |= XB_X;
                         if (sec)    ctrl.buttons |= XB_Y;
-                        // NOT mapped to LB here any more. In gameplay LB is the SCANNER, and the left grip is
-                        // the hand that grabs a magazine, so every reach for the mag popped the scanner open.
-                        // LB is now emitted menu-only, in vr_core's XInput merge, exactly the way the right
-                        // grip's RB already is and for the same reason: menus run no gameplay actions, so a tab
-                        // navigation there is safe while a gameplay binding is not.
+                        if (frameBumper) ctrl.buttons |= XB_LEFT_SHOULDER;
+                        // The GRIP is not mapped to LB here: it grabs a magazine, so doing that used to pop
+                        // the scanner open. Frame's separate physical bumper can safely emit LB without
+                        // changing the grip gesture.
 
                         // LEFT stick click = D-Pad modifier (direction picked with the
                         // RIGHT stick, see the right-hand branch). The vanilla L3
@@ -1675,6 +1676,7 @@ DWORD OpenXRManager::FrameThreadMain() {
                         if (sclick) ctrl.buttons |= XB_RIGHT_THUMB;
                         if (prim)   ctrl.buttons |= XB_A;
                         if (sec)    ctrl.buttons |= XB_B;
+                        if (frameBumper) ctrl.buttons |= XB_RIGHT_SHOULDER;
 
                         // D-PAD CHORD: while the LEFT stick click is held, the RIGHT
                         // stick picks the D-Pad direction. The right axes are zeroed for
@@ -1718,7 +1720,28 @@ DWORD OpenXRManager::FrameThreadMain() {
                 }
 
                 if (gameplayInputActive) {
-                    // Menu button is single (no per-hand binding) on Touch/Index/Vive/WMR.
+                    auto getGlobalBool = [&](XrAction action) -> bool {
+                        if (action == XR_NULL_HANDLE) return false;
+                        XrActionStateGetInfo gi{XR_TYPE_ACTION_STATE_GET_INFO};
+                        gi.action = action;
+                        gi.subactionPath = XR_NULL_PATH;
+                        XrActionStateBoolean st{XR_TYPE_ACTION_STATE_BOOLEAN};
+                        return XR_SUCCEEDED(xrGetActionStateBoolean(m_session, &gi, &st)) &&
+                               st.isActive && st.currentState;
+                    };
+
+                    // Steam Frame's gamepad controls that do not fit the Touch-style per-hand
+                    // primary/secondary model. On every other interaction profile these actions
+                    // are inactive and contribute nothing.
+                    if (getGlobalBool(m_frameXButtonAction))    ctrl.buttons |= 0x4000; // X
+                    if (getGlobalBool(m_frameYButtonAction))    ctrl.buttons |= 0x8000; // Y
+                    if (getGlobalBool(m_frameDpadUpAction))     ctrl.buttons |= 0x0001;
+                    if (getGlobalBool(m_frameDpadDownAction))   ctrl.buttons |= 0x0002;
+                    if (getGlobalBool(m_frameDpadLeftAction))   ctrl.buttons |= 0x0004;
+                    if (getGlobalBool(m_frameDpadRightAction))  ctrl.buttons |= 0x0008;
+                    if (getGlobalBool(m_frameViewButtonAction)) ctrl.buttons |= 0x0020; // Back/View
+
+                    // Menu/Start is one global action. Its physical hand varies by profile.
                     if (m_menuButtonAction != XR_NULL_HANDLE) {
                         XrActionStateGetInfo gi{XR_TYPE_ACTION_STATE_GET_INFO};
                         gi.action = m_menuButtonAction;

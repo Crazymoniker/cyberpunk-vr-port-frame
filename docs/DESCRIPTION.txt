@@ -156,6 +156,11 @@ ON FOOT
                                 cannot snap-turn you. Release without choosing and it emits
                                 the normal left stick click instead.
 
+  Steam Frame                  native OpenXR profile: right A/B/X/Y are the matching pad
+                                buttons; left D-pad, left View, right Menu and both bumpers
+                                become D-pad, Back, Start and LB/RB. Touch emulation remains
+                                the fallback when the runtime does not expose the extension.
+
 B is the mod's only while a weapon is actually in your hand, because a magazine drop is the
 only thing the mod needs it for. Holstered it reaches the game, so the phone and the radial
 close normally.
@@ -325,8 +330,8 @@ FEATURES
     prefer the headset's own OpenXR runtime - PimaxXR is clean, SteamVR is not, and the fix
     for that is still to come.
 
-  - Pre-launch render-resolution selector: 13 headsets, 60 resolutions, every ladder
-    reaching 6000 px. PlayStation VR2 and the Bigscreen Beyond 2/2e are new here.
+  - Pre-launch render-resolution selector: 14 headsets, 60 resolutions, every ladder
+    reaching 6000 px. Steam Frame, PlayStation VR2 and the Bigscreen Beyond 2/2e are included.
 
   - Runtime and hardware diagnostics in the log: OpenXR runtime and system, GPU and driver,
     swapchain init, frame-pipeline events.

@@ -116,8 +116,8 @@ Repository: <https://github.com/dariulone/cyberpunk-vr-port>
   latches so the car keeps rolling.
 - **World-map head-lock** — DLSS/NGX handling (the second
   view gets its own upscaler viewport automatically).
-- **13 headsets, 60 resolutions**, every ladder reaching 6000 px, picked before
-  launch — PlayStation VR2 and the Bigscreen Beyond 2/2e included.
+- **14 headsets, 60 resolutions**, every ladder reaching 6000 px, picked before
+  launch — Steam Frame, PlayStation VR2 and the Bigscreen Beyond 2/2e included.
 - **HUD placement is HUDitor**, which moves and scales each
   widget individually. The port shipped its own HUD mod until 2026-08-20 and it
   is gone: it scaled the shared HUD root around screen centre, which is too
@@ -226,8 +226,15 @@ VR controller input is merged into the native CP2077 gamepad, so the in-game
 | B, **holstered** | The game's own B again — close the phone, back out |
 | B, **phone / radio / vehicle list open** | Closes it, weapon in hand or not — and cannot drop a magazine for a second afterwards |
 | X / Y | Reload·interact / Weapon switch |
-| Left menu button | Pause menu |
+| Menu button (left on Touch; right on Steam Frame) | Pause menu |
 | Swing a melee weapon | VR motion melee (native attack along the blade) |
+
+Steam Frame uses Valve's native `XR_VALVE_frame_controller_interaction` profile when the
+runtime exposes it. Its right-hand A/B/X/Y buttons map to the matching XInput buttons; the
+left D-pad, left View button, right Menu button and both bumpers map to D-pad, Back, Start and
+LB/RB respectively. Triggers, grips, sticks and tracked poses keep the same VR behavior as the
+other controller profiles. If the extension is unavailable, SteamVR's Oculus Touch emulation
+remains the fallback.
 
 While the scanner is open the same hand works it: the **left stick to the stop**
 pages the quickhack list (below the stop it still walks, so you can read and move),
