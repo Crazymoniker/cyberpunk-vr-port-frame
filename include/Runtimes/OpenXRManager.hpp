@@ -875,7 +875,17 @@ private:
     XrAction m_thumbstickClickAction = XR_NULL_HANDLE;   // Bool, per hand (L3/R3)
     XrAction m_primaryButtonAction = XR_NULL_HANDLE;     // Bool, per hand (X / A)
     XrAction m_secondaryButtonAction = XR_NULL_HANDLE;   // Bool, per hand (Y / B)
-    XrAction m_menuButtonAction = XR_NULL_HANDLE;        // Bool, left only on Touch
+    XrAction m_menuButtonAction = XR_NULL_HANDLE;        // Bool, global menu/start action
+    // Steam Frame has a full gamepad layout split across the two tracked controllers. These are
+    // created only when XR_VALVE_frame_controller_interaction is exposed by the active runtime.
+    XrAction m_frameXButtonAction = XR_NULL_HANDLE;      // Bool, right X
+    XrAction m_frameYButtonAction = XR_NULL_HANDLE;      // Bool, right Y
+    XrAction m_frameDpadUpAction = XR_NULL_HANDLE;       // Bool, left D-pad
+    XrAction m_frameDpadDownAction = XR_NULL_HANDLE;
+    XrAction m_frameDpadLeftAction = XR_NULL_HANDLE;
+    XrAction m_frameDpadRightAction = XR_NULL_HANDLE;
+    XrAction m_frameViewButtonAction = XR_NULL_HANDLE;   // Bool, XInput Back/View
+    XrAction m_frameBumperAction = XR_NULL_HANDLE;       // Bool, per hand (LB/RB)
     XrPath m_handPaths[2] = { XR_NULL_PATH, XR_NULL_PATH };
     XrSpace m_handSpaces[2] = { XR_NULL_HANDLE, XR_NULL_HANDLE };
     // Latest controller snapshot, owned by the frame thread.

@@ -15,6 +15,12 @@
 #include <utility>
 #include <chrono>
 
+// Steam Frame's controller interaction profile was published after the OpenXR SDK revision this
+// project builds against.  It adds no structs or functions, so using the extension/profile names
+// directly keeps the pinned loader while still enabling the profile on runtimes that expose it.
+static constexpr char kSteamFrameControllerExtension[] = "XR_VALVE_frame_controller_interaction";
+static constexpr char kSteamFrameControllerProfile[] = "/interaction_profiles/valve/frame_controller_valve";
+
 static void EulerToQuat(float pitchDeg, float yawDeg, float rollDeg, float& qx, float& qy, float& qz, float& qw) {
     float p = pitchDeg * (3.1415926535f / 180.0f) * 0.5f;
     float y = yawDeg * (3.1415926535f / 180.0f) * 0.5f;
@@ -600,9 +606,10 @@ bool OpenXRManager::Init() {
     std::vector<const char*> extensions = {
         XR_KHR_D3D12_ENABLE_EXTENSION_NAME
     };
+    bool steamFrameControllerProfileEnabled = false;
 
-    // Depth-layer support: submitting the game depth as XR_KHR_composition_layer_depth
-    // gives the runtime depth for correct reprojection (kills the flat-color tearing).
+    // Optional extensions. Depth submission gives the runtime correct reprojection; Steam Frame's
+    // controller extension exposes its full gamepad-like layout instead of the lossy Touch fallback.
     {
         uint32_t extCount = 0;
         xrEnumerateInstanceExtensionProperties(nullptr, 0, &extCount, nullptr);
@@ -613,11 +620,15 @@ bool OpenXRManager::Init() {
                 if (strcmp(p.extensionName, XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME) == 0) {
                     m_depthLayerSupported = true;
                     extensions.push_back(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
-                    break;
+                } else if (strcmp(p.extensionName, kSteamFrameControllerExtension) == 0) {
+                    steamFrameControllerProfileEnabled = true;
+                    extensions.push_back(kSteamFrameControllerExtension);
                 }
             }
         }
         Log("OpenXRManager: depth-layer (XR_KHR_composition_layer_depth) supported=%d\n", m_depthLayerSupported ? 1 : 0);
+        Log("OpenXRManager: Steam Frame controller (%s) supported=%d\n",
+            kSteamFrameControllerExtension, steamFrameControllerProfileEnabled ? 1 : 0);
     }
 
     XrInstanceCreateInfo createInfo{XR_TYPE_INSTANCE_CREATE_INFO};
@@ -736,6 +747,19 @@ bool OpenXRManager::Init() {
             makeAction(m_primaryButtonAction,   XR_ACTION_TYPE_BOOLEAN_INPUT,  "primary_button",   "Primary Button (A/X)", true);
             makeAction(m_secondaryButtonAction, XR_ACTION_TYPE_BOOLEAN_INPUT,  "secondary_button", "Secondary Button (B/Y)", true);
             makeAction(m_menuButtonAction,      XR_ACTION_TYPE_BOOLEAN_INPUT,  "menu",             "Menu Button",          false);
+            if (steamFrameControllerProfileEnabled) {
+                // Frame puts all four face buttons on the right hand and adds a physical D-pad,
+                // View button and bumpers. They need independent actions because the Touch-shaped
+                // primary/secondary actions cannot distinguish right X/Y from right A/B.
+                makeAction(m_frameXButtonAction,    XR_ACTION_TYPE_BOOLEAN_INPUT, "frame_x",          "Frame X Button",     false);
+                makeAction(m_frameYButtonAction,    XR_ACTION_TYPE_BOOLEAN_INPUT, "frame_y",          "Frame Y Button",     false);
+                makeAction(m_frameDpadUpAction,     XR_ACTION_TYPE_BOOLEAN_INPUT, "frame_dpad_up",    "Frame D-pad Up",     false);
+                makeAction(m_frameDpadDownAction,   XR_ACTION_TYPE_BOOLEAN_INPUT, "frame_dpad_down",  "Frame D-pad Down",   false);
+                makeAction(m_frameDpadLeftAction,   XR_ACTION_TYPE_BOOLEAN_INPUT, "frame_dpad_left",  "Frame D-pad Left",   false);
+                makeAction(m_frameDpadRightAction,  XR_ACTION_TYPE_BOOLEAN_INPUT, "frame_dpad_right", "Frame D-pad Right",  false);
+                makeAction(m_frameViewButtonAction, XR_ACTION_TYPE_BOOLEAN_INPUT, "frame_view",       "Frame View Button",  false);
+                makeAction(m_frameBumperAction,     XR_ACTION_TYPE_BOOLEAN_INPUT, "frame_bumper",     "Frame Bumper",       true);
+            }
         }
         Log("OpenXRManager[Input]: gameplay action set %s (xr_input_actions=%d)\n",
             inputActionsEnabled ? "ENABLED" : "DISABLED (pose-only)", (int)inputActionsEnabled);
@@ -776,7 +800,42 @@ bool OpenXRManager::Init() {
                                           "/interaction_profiles/khr/simple_controller" }) {
                 suggest(profile, poseOnly);
             }
+            if (steamFrameControllerProfileEnabled) {
+                suggest(kSteamFrameControllerProfile, poseOnly);
+            }
             goto bindings_done;
+        }
+
+        // -- Steam Frame: full console layout plus tracked poses --
+        // Valve's compatibility layer can emulate Touch, but that folds Frame's D-pad and extra
+        // face buttons together. The native profile preserves every gamepad control independently.
+        if (steamFrameControllerProfileEnabled) {
+            suggest(kSteamFrameControllerProfile, {
+                { m_handPoseAction,           "/user/hand/left/input/grip/pose" },
+                { m_handPoseAction,           "/user/hand/right/input/grip/pose" },
+                { m_handAimPoseAction,        "/user/hand/left/input/aim/pose" },
+                { m_handAimPoseAction,        "/user/hand/right/input/aim/pose" },
+                { m_thumbstickAction,         "/user/hand/left/input/thumbstick" },
+                { m_thumbstickAction,         "/user/hand/right/input/thumbstick" },
+                { m_thumbstickClickAction,    "/user/hand/left/input/thumbstick/click" },
+                { m_thumbstickClickAction,    "/user/hand/right/input/thumbstick/click" },
+                { m_triggerAction,            "/user/hand/left/input/trigger/value" },
+                { m_triggerAction,            "/user/hand/right/input/trigger/value" },
+                { m_gripAction,               "/user/hand/left/input/squeeze/value" },
+                { m_gripAction,               "/user/hand/right/input/squeeze/value" },
+                { m_primaryButtonAction,      "/user/hand/right/input/a/click" },
+                { m_secondaryButtonAction,    "/user/hand/right/input/b/click" },
+                { m_frameXButtonAction,       "/user/hand/right/input/x/click" },
+                { m_frameYButtonAction,       "/user/hand/right/input/y/click" },
+                { m_menuButtonAction,         "/user/hand/right/input/menu/click" },
+                { m_frameDpadUpAction,        "/user/hand/left/input/dpad_up/click" },
+                { m_frameDpadDownAction,      "/user/hand/left/input/dpad_down/click" },
+                { m_frameDpadLeftAction,      "/user/hand/left/input/dpad_left/click" },
+                { m_frameDpadRightAction,     "/user/hand/left/input/dpad_right/click" },
+                { m_frameViewButtonAction,    "/user/hand/left/input/view/click" },
+                { m_frameBumperAction,        "/user/hand/left/input/bumper/click" },
+                { m_frameBumperAction,        "/user/hand/right/input/bumper/click" },
+            });
         }
 
         // -- Oculus Touch (Quest/Rift): X/Y on left, A/B on right, menu = left menu button --
@@ -2015,6 +2074,14 @@ void OpenXRManager::Shutdown() {
     m_primaryButtonAction = XR_NULL_HANDLE;
     m_secondaryButtonAction = XR_NULL_HANDLE;
     m_menuButtonAction = XR_NULL_HANDLE;
+    m_frameXButtonAction = XR_NULL_HANDLE;
+    m_frameYButtonAction = XR_NULL_HANDLE;
+    m_frameDpadUpAction = XR_NULL_HANDLE;
+    m_frameDpadDownAction = XR_NULL_HANDLE;
+    m_frameDpadLeftAction = XR_NULL_HANDLE;
+    m_frameDpadRightAction = XR_NULL_HANDLE;
+    m_frameViewButtonAction = XR_NULL_HANDLE;
+    m_frameBumperAction = XR_NULL_HANDLE;
 
     m_views.clear();
     m_viewConfigViews.clear();

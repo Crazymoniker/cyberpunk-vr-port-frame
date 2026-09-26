@@ -125,6 +125,20 @@ static const ResolutionPreset kPico4UltraResolutions[] = {
     {6000, 6000, L"6000 x 6000"},
 };
 
+// STEAM FRAME. Valve specifies a square 2160x2160 panel per eye. The runtime-reported frustum is
+// still the authority for projection, but every entry here is an already-authored square VRCAM
+// component, so the headset has a native launcher choice without requiring new archive assets.
+static const ResolutionPreset kSteamFrameResolutions[] = {
+    {2160, 2160, L"2160 x 2160 (Native panel)"},
+    {1920, 1920, L"1920 x 1920 (Performance)"},
+    {2048, 2048, L"2048 x 2048"},
+    {2560, 2560, L"2560 x 2560 (Balanced)"},
+    {3072, 3072, L"3072 x 3072 (High)"},
+    {4096, 4096, L"4096 x 4096 (Ultra)"},
+    {5000, 5000, L"5000 x 5000"},
+    {6000, 6000, L"6000 x 6000"},
+};
+
 static const ResolutionPreset kCrystalOGResolutions[] = {
     {2464, 2448, L"2464 x 2448 (Native)"},
     {2160, 2145, L"2160 x 2145"},
@@ -261,6 +275,7 @@ static const HmdPreset kHmdPresets[] = {
     {10,L"PDA",   L"Pimax Dream Air", kPimaxDreamAirResolutions, _countof(kPimaxDreamAirResolutions)},
     {11,L"PSVR2", L"PlayStation VR2", kPlayStationVr2Resolutions, _countof(kPlayStationVr2Resolutions)},
     {12,L"BSB2",  L"Bigscreen Beyond 2/2e", kBigscreenBeyond2Resolutions, _countof(kBigscreenBeyond2Resolutions)},
+    {13,L"SFRAME",L"Steam Frame",      kSteamFrameResolutions, _countof(kSteamFrameResolutions)},
 };
 
 struct RuntimeOption {
